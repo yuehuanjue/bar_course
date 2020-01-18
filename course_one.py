@@ -20,8 +20,8 @@ class image(object):
             img = new_img
         else:
             img = self.img
-        # plt.figure(figsize=self.show_size)
-        plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))  # 转换为灰度
+        plt.figure(figsize=self.show_size)
+        plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         plt.show()
 
     def show_image_for_opencv(self):
@@ -167,3 +167,100 @@ if __name__ == "__main__":
     path = "scarlett_johansson_one.jpg"
     img_one = image(path=path, show_size=(5, 5))
     img_one.change_color_with_HSV()
+
+
+class image(object):
+    def __init__(self, path, show_size=(3, 3)):
+        self.img = cv2.imread(path)
+        self.show_size = show_size
+
+    def show(self, image_new=""):
+        if len(image_new):
+            image = image_new
+        else:
+            image = self.img
+
+        #         plt.figure(figsize=self.show_size)
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))  # 转换为灰度
+        plt.show()
+
+    def median_blur(self, ksize=5):
+        img = self.img
+        img_new = cv2.medianBlur(img, ksize)
+        self.show(image_new=img_new)
+
+    def median_gray(self, ksize=5):  # image为传入灰度图像，ksize为滤波窗口大小
+        image = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
+        high, wide = image.shape[:2]
+        img = image.copy()
+        mid = (ksize - 1) // 2
+
+        med_arry = []
+        for i in range(high - ksize):
+            for j in range(wide - ksize):
+                for m1 in range(ksize):
+                    for m2 in range(ksize):
+                        med_arry.append(int(image[i + m1, j + m2]))
+
+                med_arry.sort()  # 对窗口像素点排序
+                img[i + mid, j + mid] = med_arry[(len(med_arry) + 1) // 2]  # 将滤波窗口的中值赋给滤波窗口中间的像素点
+                del med_arry[:]
+        img_new = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        self.show(image_new=img_new)
+
+    def mid_sort(data):
+        for i in range(len(data) - 1):
+            for j in range(len(data) - 2):
+                if data[j + 1] < data[j]:
+                    tmp = data[j]
+                    data[j] = data[j + 1]
+                    data[j + 1] = tmp
+        index = int(len(data) / 2)
+        return data[index]
+
+    def flatten(matrix):
+        w = len(matrix)
+        h = len(matrix[0])
+        tmp = []
+        for i in range(w):
+            for j in range(h):
+                tmp.append(matrix[i][j])
+        return tmp
+
+    def mid_filter(data, width, height, n):
+        tmp = data
+        for i in range(0, height - n + 1):  # 先h后w :(
+            for j in range(0, width - n + 1):
+                modle = data[i:i + n]
+                modle = modle[:, j:j + n]
+                modle = self.flatten(modle)
+                mid = self.mid_sort(modle)
+                tmp[i + int((n - 1) / 2), j + int((n - 1) / 2)] = mid
+        return tmp
+
+    def median_new(self):
+        im = self.img
+        data = []
+        width, height = im.shape[:2][::-1]
+
+        # 读取图像像素值，并计算灰度值
+        for h in range(height):
+            row = []
+            for w in range(width):
+                value = im.getpixel((w, h))
+                row.append((value[0] + value[1] + value[2]) / 3)  # pixel是RGBA  :(，所以需要计算灰度值
+            data.append(row)
+
+        # 二维中值滤波
+        data = np.float32(data)
+        # data = signal.medfilt2d(data, (3,3))
+        data = self.mid_filter(data, width, height, 3)
+
+        # 创建并保存结果图像
+        for h in range(height):
+            for w in range(width):
+                tmp = (int(data[h][w]), int(data[h][w]), int(data[h][w]))
+                # im.putpixel((w,h), int(data[h][w]))  放回去还要改维数 :(
+                im.putpixel((w, h), tmp)
+
+        self.show(image_new=im)
